@@ -18,8 +18,8 @@ const int LEDgreen = 1;
 const int LEDred = 2;
 
 void LightLED(int colour) {
-  digitalWrite(5, colour & 1);
-  digitalWrite(4, colour >> 1 & 1);
+  digitalWrite(PIN_PB2, colour & 1); //PIN 5, physical pin 7
+  digitalWrite(PIN_PB3, colour >> 1 & 1); //PIN 4, physical pin 6
 }
 
 // I2C Interface **********************************************
@@ -518,8 +518,8 @@ ISR(TWI0_TWIS_vect) {
 // Setup **********************************************
 
 void setup(void) {
-  pinMode(4, OUTPUT);  // Red LED
-  pinMode(5, OUTPUT);  // Green LED
+  pinMode(PIN_PB3, OUTPUT);  // Red LED //Arduino PIN 4, physical pin 6
+  pinMode(PIN_PB2, OUTPUT);  // Green LED //Arduino PIN 5, physical pin 7
   LightLED(LEDgreen);  // Green = Initialising
   I2CSetup();          // Setup I2C Slave
   // see if the card is present and can be initialized:
