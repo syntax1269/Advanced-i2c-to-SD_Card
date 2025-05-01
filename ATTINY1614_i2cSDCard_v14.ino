@@ -59,7 +59,6 @@ File myFile;
 Sd2Card card;
 SdVolume volume;
 SdFile root;
-// char dirResult[300] = ""; // REMOVED - No longer needed
 
 // Static variables for directory listing streaming state ('L' command)
 static File dirList_currentDir;
@@ -132,7 +131,7 @@ void DataHostRead() {
     TWI0.SDATA = myFile.read();  // Host read operation
   } else if (command == 'E') {
     TWI0.SDATA = SD.exists(Filename);  // does file exists
-  } else if (command == 'K') {         // MODIFIED: Check if path is a directory
+  } else if (command == 'K') {         // Check if path is a directory
     File checkFile = SD.open(Filename);
     if (checkFile && checkFile.isDirectory()) {
       TWI0.SDATA = 1;  // Path exists and is a directory
@@ -144,8 +143,7 @@ void DataHostRead() {
     if (checkFile) {
       checkFile.close();
     }
-    // ptr = 0; // ptr not used here, removed reset
-  } else if (command == 'L') {  // MODIFIED: Stream directory listing byte-by-byte
+  } else if (command == 'L') {  // Stream directory listing byte-by-byte
     uint8_t dataToSend = 0xFF;  // Default to end marker
 
     switch (dirList_state) {
@@ -158,7 +156,6 @@ void DataHostRead() {
             if (dirList_currentDir) dirList_currentDir.close();
             dirList_dirOpen = false;
             dataToSend = 0xFF;  // Send end marker
-                                // Stay IDLE
           } else {
             dirList_dirOpen = true;
             // Try to get the first entry
@@ -168,7 +165,6 @@ void DataHostRead() {
               dirList_currentDir.close();
               dirList_dirOpen = false;
               dataToSend = 0xFF;  // Send end marker
-                                  // Stay IDLE
             } else {
               // First entry found, send its TYPE
               dataToSend = dirList_currentEntry.isDirectory() ? 'D' : 'F';
@@ -184,10 +180,10 @@ void DataHostRead() {
             }
           }
           break;
-        }  // Added braces
+        }  
 
       case DIR_STREAM_SEND_NAME:
-        {  // Added braces
+        {  
           // Send characters of the filename
           if (dirList_byteCounter < strlen(dirList_filenameBuffer)) {
             dataToSend = dirList_filenameBuffer[dirList_byteCounter++];
@@ -200,10 +196,10 @@ void DataHostRead() {
             dirList_byteCounter = 0;  // Reset counter for size bytes
           }
           break;
-        }  // Added braces
+        } 
 
       case DIR_STREAM_SEND_SIZE:
-        {  // Added braces
+        { 
           // Send size bytes (LSB first)
           dataToSend = (uint8_t)(dirList_entrySize >> (8 * dirList_byteCounter));
           dirList_byteCounter++;
@@ -223,10 +219,10 @@ void DataHostRead() {
           }
           // If counter < 4, dataToSend is already set to the current size byte
           break;
-        }  // Added braces
+        }
 
       case DIR_STREAM_SEND_TYPE_NEXT:
-        {  // Added braces
+        { 
           // Send TYPE of the new entry found in the previous step
           dataToSend = dirList_currentEntry.isDirectory() ? 'D' : 'F';
           // Prepare name buffer for the new entry
@@ -239,16 +235,16 @@ void DataHostRead() {
           dirList_state = DIR_STREAM_SEND_NAME;
           dirList_byteCounter = 0;
           break;
-        }  // Added braces
+        }
 
       case DIR_STREAM_SEND_END:
-        {  // Added braces and handled this case
+        { 
           // Send the final end marker
           dataToSend = 0xFF;
           dirList_state = DIR_STREAM_IDLE;  // Reset state machine
           // Cleanup happens in Stop() if needed, or can be added here
           break;
-        }  // Added braces
+        } 
     }      // End switch(dirList_state)
 
     TWI0.SDATA = dataToSend;
@@ -259,16 +255,12 @@ void DataHostRead() {
     } else {
       LightLED(LEDoff);  // Off when idle/finished
     }
-
-    // Update ptr status (used elsewhere?) - This might need review depending on 'ptr' usage
     ptr = (dirList_state != DIR_STREAM_IDLE);
-
   } else if (command == 'M') {
     TWI0.SDATA = SD.mkdir(Filename);  // Create directory
   } else if (command == 'Q') {
-    //TWI0.SDATA = card.type(); // Query SD Card for type
     if (card.init(SPI_HALF_SPEED, PIN_PA4)) {
-      TWI0.SDATA = card.type();
+      TWI0.SDATA = card.type();  // Query SD Card for type
       // type will be 0, 1, 2, or 3 as described above
     }
   } else if (command == 'V') {
@@ -368,8 +360,6 @@ boolean DataHostWrite() {
         } else {
           return false;  // NACK if filename too long
         }
-        // break; // Unreachable due to return
-
       case 'W':  // Write data bytes
       case 'A':  // Append data bytes
         if (myFile) {
@@ -380,8 +370,6 @@ boolean DataHostWrite() {
           LightLED(LEDred);
           return false;  // NACK if file not open
         }
-        // break; // Unreachable
-
       case 'C':  // Clock set data bytes
         if (rtc_buffer_ptr < 6) {
           rtc_buffer[rtc_buffer_ptr++] = received_data;
@@ -390,8 +378,6 @@ boolean DataHostWrite() {
           // Received more than 6 bytes for clock command
           return false;  // NACK extra clock data bytes
         }
-        // break; // Unreachable
-
       default:
         // Host is writing data for a command that doesn't expect it
         // (e.g., R, S, V, Q, K, L, E, M, D, X)
@@ -524,15 +510,15 @@ void setup(void) {
   I2CSetup();          // Setup I2C Slave
   // see if the card is present and can be initialized:
   // Use the correct CS pin for ATtiny1614 (often PA4/SS if using default SPI pins)
-  // Check your specific board/wiring. Assuming default SS is PA4 (pin 3 in Arduino numbering for megaTinyCore)
-  if (!SD.begin()) {   // Use Arduino pin number for CS
+  // Check your specific board/wiring. Assuming default SS is PA4 (pin 0 in Arduino numbering for megaTinyCore)
+  if (!SD.begin()) {   // PIN_PA4 for CS if you need to, but we are using delaut SPI pins
     LightLED(LEDred);  // Solid Red = SD Error
     while (1)
       ;  // don't do anything more
   }
 
   // --- Set the timestamp callback ---
-  SdFile::dateTimeCallback(dateTimeCallback);  // <<< ADDED: Register the callback
+  SdFile::dateTimeCallback(dateTimeCallback);  // <<< Register the callback in SD library
 
   // Get volume info once at startup
   if (!volume.init(card)) {
@@ -550,5 +536,5 @@ void setup(void) {
 
 void loop(void) {
   // Keep empty or add minimal delay
-  delay(1);  // Small delay to prevent potential watchdog issues if loop is completely empty
+//  delay(1);  //*Optional* Add a small delay to prevent potential watchdog issues if loop is completely empty, usually not needed
 }
